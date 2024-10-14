@@ -1,0 +1,91 @@
+---
+title: "Deep Learning"
+author: "KM"
+date: "2024-09-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Install and load necessary packages
+install.packages("nycflights13")
+install.packages("nnet")  # For building the neural network
+install.packages("dplyr") # For data manipulation
+
+library(nycflights13) #The dataset available in R
+library(nnet)
+library(dplyr)
+```
+
+
+```{r}
+# Step 1: Load and preprocess the data
+
+data("flights")
+
+
+# Step 2: Data Cleaning
+# For simplicity, we'll filter data with no missing values and select relevant columns.
+# Let's predict the `arr_delay` based on some features like month, day, dep_delay, and distance.
+
+flights_clean <- flights %>%
+  filter(!is.na(arr_delay)) %>%
+  select(month, day, dep_delay, distance, arr_delay)
+
+
+# Normalize numeric features (except the target variable arr_delay)
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+flights_clean <- flights_clean %>%
+  mutate(across(c(month, day, dep_delay, distance), normalize))
+```
+
+
+```{r}
+# Step 3: Splitting data into train and test sets
+set.seed(123)
+sample_index <- sample(seq_len(nrow(flights_clean)), size = 0.7 * nrow(flights_clean))
+train_data <- flights_clean[sample_index, ]
+test_data  <- flights_clean[-sample_index, ]
+```
+
+
+```{r}
+# Step 4: Train the neural network
+# We'll use 'nnet' to create a simple neural network
+
+set.seed(123)
+nn_model <- nnet(arr_delay ~ month + day + dep_delay + distance, 
+                 data = train_data, 
+                 size = 5,  # Number of neurons in the hidden layer
+                 linout = TRUE)  # For regression tasks
+```
+
+
+```{r}
+# Step 5: Predicting on test data
+test_pred <- predict(nn_model, test_data)
+```
+
+
+```{r}
+
+# Step 6: Evaluate the model performance (e.g., Mean Squared Error)
+mse <- mean((test_pred - test_data$arr_delay)^2)
+print(paste("Mean Squared Error:", mse))
+
+# Optional: Plot actual vs predicted delays
+plot(test_data$arr_delay, test_pred, 
+     main = "Actual vs Predicted Delays", 
+     xlab = "Actual Arrival Delay", 
+     ylab = "Predicted Arrival Delay")
+abline(0, 1, col = "red")
+
+```
+
